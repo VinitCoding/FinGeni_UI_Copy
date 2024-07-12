@@ -9,10 +9,6 @@
 html,
 body {
   font-family: "Poppins", sans-serif;
-  background-image: url('src/assets/bg_img_1.jpg');
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: cover;
   height: 100%;
   width: 100%;
 
@@ -28,4 +24,8 @@ body {
 
 .merriweather{
   font-family: "Merriweather", serif;
+}
+
+.shadow-prompt{
+box-shadow: -8px 10px 6px gray ;
 }

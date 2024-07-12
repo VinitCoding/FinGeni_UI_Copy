@@ -8,9 +8,9 @@ import Header from "./components/Header";
 const App = () => {
   return (
     <section >
-      <nav className='fixed flex justify-between w-full px-4 py-1 bg-white shadow-md'>
+      {/* <nav className='fixed z-20 flex justify-between w-full px-4 py-0.5 bg-white shadow-md'>
         <Header />
-      </nav>
+      </nav> */}
       
       {/* Main Content */}
       <div>
