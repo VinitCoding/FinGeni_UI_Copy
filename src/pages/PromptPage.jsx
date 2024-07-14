@@ -65,7 +65,7 @@ const PromptPage = () => {
             </div>
           </div>
           <div className="p-1.5 mt-3 bg-white flex justify-between gap-x-7 px-3 h-fit rounded-lg items-center">
-            <textarea  type="text" className="focus:border-[0.5px] focus:border-[#666666] focus:rounded focus:outline-none w-full resize-none p-1" rows='1' cols='1' placeholder="Ask Me Anything..."/>
+            <textarea  type="text" className="focus:border-[0.5px] focus:border-[#666666] focus:rounded focus:outline-none w-full resize-none p-1 text-sm" rows='1' cols='1' placeholder="Ask Me Anything..."/>
             <img src={send_img} className="w-8 h-fit hover:cursor-pointer"/>
           </div>
         </div>
