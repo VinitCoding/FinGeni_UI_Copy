@@ -4,7 +4,7 @@ import sidebar_img from "../assets/sidebar_bg.svg";
 import logo from "../assets/fingeni_by_chistats_logo.svg";
 // import sidepanel_img from "../assets/show_sidepanel.png";
 import { BsArrowRightCircleFill, BsArrowLeftCircleFill } from "react-icons/bs";
-import { Dock } from "react-dock";
+import send_img from '../assets/sent.png'
 
 const PromptPage = () => {
   const [sidebar, setSidebar] = useState(false);
@@ -22,9 +22,9 @@ const PromptPage = () => {
         <img src={logo} className="pl-3" />
       </nav>
       {/* Body */}
-      <div className="relative flex justify-start h-[630px] gap-x-24">
+      <div className="relative flex justify-start h-[630px] gap-x-[200px]">
         {/* Sidebar */}
-        <div className="w-10 h-auto border-white border-[2px] relative ml-3 flex justify-end">
+        <div className="relative flex justify-end w-10 h-auto ml-3">
           <BsArrowRightCircleFill
             className="absolute top-[49%] text-[#666666] text-3xl"
             onClick={sidebarMotion}
@@ -54,6 +54,21 @@ const PromptPage = () => {
             </div>
           </div>
         ) : null}
+
+        {/* Prompt Area */}
+
+        {/* Prompt  */}
+        <div className="flex flex-col w-full mr-36">
+          <div className="w-full h-[90%] border-[1px] border-white px-5 overflow-y-auto">
+            <div className="w-full mt-3 px-3 h-fit border-[1px] border-black ">
+              <div>hiii</div>
+            </div>
+          </div>
+          <div className="p-1.5 mt-3 bg-white flex justify-between gap-x-7 px-3 h-fit rounded-lg items-center">
+            <textarea  type="text" className="focus:border-[0.5px] focus:border-[#666666] focus:rounded focus:outline-none w-full resize-none p-1" rows='1' cols='1' placeholder="Ask Me Anything..."/>
+            <img src={send_img} className="w-8 h-fit hover:cursor-pointer"/>
+          </div>
+        </div>
       </div>
     </section>
   );
