@@ -1,0 +1,34 @@
+Chat History Side Bar
+Response Body : 
+{
+    data : [
+        {
+            'uid':1,
+            'title':'Tell about Titan Stocks'
+        },
+        {
+            'uid':2,
+            'title':'Tell about Adani Stocks'
+        },
+        {
+            'uid':3,
+            'title':'What are SEBI Norms?'
+        }
+    ]
+}
+
+
+Chat Window Response Body:
+{
+    'uid' : 1,
+    'messages' : [
+        {
+            'user' : 'Tell me about Titan Stocks',
+            'assistant' : 'answer 1'
+        },
+        {
+            'user' : 'What is the value of these stocks?',
+            'assistant' : 'answer 2'
+        },
+    ]
+}
