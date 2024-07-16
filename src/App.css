@@ -29,3 +29,30 @@ body {
 .shadow-prompt{
 box-shadow: -8px 10px 6px gray ;
 }
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+/* Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.input-height{
+  height: 100%;
+}
+
+.input-container-height{
+  height: 6%;
+}
+
+.input-height:focus{
+  height: 100%;
+}
+
+.input-height:focus ~ .input-container-height{
+  height: 9%;
+}
