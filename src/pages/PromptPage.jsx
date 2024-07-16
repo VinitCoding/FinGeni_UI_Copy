@@ -97,6 +97,7 @@ const PromptPage = () => {
 
         <button className="text-xl bg-[#435689] rounded-full p-2" title="home" onClick={handleNavigate}><IoHome className="text-white"/></button>
       </nav>
+      
       {/* Body */}
       <div className="relative flex justify-start h-[630px] gap-x-[200px]">
         {/* Sidebar */}
