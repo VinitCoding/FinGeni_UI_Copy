@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import bg_img from "../assets/prompt_bg.svg";
 import sidebar_img from "../assets/sidebar_bg.svg";
 import logo from "../assets/fingeni_by_chistats_logo.svg";
@@ -13,7 +13,8 @@ import loading_img from '../assets/assistant.svg'
 
 const PromptPage = () => {
   const navigate = useNavigate();
-  let animate = true
+  const username = "Aditya";
+  let animate = true;
   // Sidebar handling system.
   const [sidebar, setSidebar] = useState(false);
 
@@ -23,7 +24,7 @@ const PromptPage = () => {
   // State for query Question
   const [queryQuestion, setQueryQuestion] = useState(null);
 
-  // State for query Question
+  // State for query Answer
   const [queryAnswer, setQueryAnswer] = useState(null);
 
   // State for setting chat session
@@ -31,32 +32,84 @@ const PromptPage = () => {
     { title: "New Chat", messages: [] },
   ]);
 
-  // state for setting seesion index
+  // state for setting session index
   const [currentSessionIndex, setCurrentSessionIndex] = useState(0);
 
-  // State for handling new Chat
+  // newChat state.
+  const [newChat, setNewChat] = useState(true);
 
+  // State for handling chat history..
+  const [chatHistory, setChatHistory] = useState([]);
+
+  // Sidebar motion
   const sidebarMotion = () => {
     setSidebar(!sidebar);
   };
 
-  const handleAPI = async () => {
+  // UseEffect to fetch chat history
+  useEffect(() => {
+    loadChatHistoryFromLocalStorage();
+  }, []);
+
+  const saveChatSessionsToLocalStorage = (sessions) => {
+    localStorage.setItem('chatSessions', JSON.stringify(sessions));
+  };
+
+  const loadChatHistoryFromLocalStorage = () => {
+    const storedChatSessions = localStorage.getItem('chatSessions');
+    if (storedChatSessions) {
+      setChatSessions(JSON.parse(storedChatSessions));
+    } else {
+      fetchChatHistory();
+    }
+  };
+
+  const fetchChatHistory = async () => {
     try {
-      animate = true
+      const response = await axios.get(`http://127.0.0.1:8001/gpt/history?username=${username}`);
+      const historyStatus = response.data.status;
+      const historyRes = response.data.history_list;
+
+      setChatHistory(historyRes);
+
+      if (historyStatus) {
+        const historySessions = await Promise.all(historyRes.map(async (history) => {
+          const res = await axios.get(`http://127.0.0.1:8001/gpt/chat_history?username=${username}&chat_record=${history.id}`);
+          return {
+            title: history.title,
+            messages: res.data.messages.map(msg => ({ question: msg.question, answer: msg.response }))
+          };
+        }));
+
+        console.log(`History - ${historySessions}`);
+        const updatedSessions = [...chatSessions, ...historySessions];
+        setChatSessions(updatedSessions);
+        saveChatSessionsToLocalStorage(updatedSessions);
+      }
+    } catch (error) {
+      console.log('Error while getting History API', error);
+    }
+  };
+
+  const handleAPI = async () => {
+    setNewChat(false);
+    try {
+      animate = true;
       if (!text) {
         alert("Please enter some query!!!");
         return;
       }
 
-      const response = await axios.post("http://127.0.0.1:8004/chat_window", {
+      const response = await axios.post("http://127.0.0.1:8001/gpt/ask", {
         question: text,
         uid: true,
         chat_id: "",
       });
       setText("");
-      console.log(response.data);
-      const newQuestion = response.data.data.messages[0].user;
-      const newAnswer = response.data.data.messages[0].assistant;
+      console.log(response);
+
+      const newQuestion = response.data.question;
+      const newAnswer = response.data.response;
 
       setQueryQuestion(newQuestion);
       setQueryAnswer(newAnswer);
@@ -75,18 +128,14 @@ const PromptPage = () => {
       ];
 
       setChatSessions(updatedSessions);
+      saveChatSessionsToLocalStorage(updatedSessions);
     } catch (error) {
       console.log("Error while getting data", error);
     }
   };
 
-  console.log("This is the chat session", chatSessions);
-  console.log("This is the current chat session", currentSessionIndex);
-
-  const handleNewChat = () => {
-    if(currentSessionIndex.length > 1){
-      return
-    }
+  const handleNewChat = async () => {
+    setNewChat(true);
     setChatSessions([...chatSessions, { title: "New Chat", messages: [] }]);
     setCurrentSessionIndex(chatSessions.length);
     setQueryQuestion(null);
@@ -97,8 +146,6 @@ const PromptPage = () => {
     navigate("/");
   };
 
-  // console.log(`Query Question:- ${queryQuestion}`);
-  // console.log(`Query Answer:- ${queryAnswer}`);
   return (
     <section
       className="w-screen h-screen bg-center bg-no-repeat bg-cover"
@@ -114,7 +161,6 @@ const PromptPage = () => {
         >
           <IoHome className="text-white" />
         </button>
-
       </nav>
 
       {/* Body */}
@@ -146,21 +192,20 @@ const PromptPage = () => {
                     onClick={sidebarMotion}
                   />
                 </div>
-                
+
                 <div>
                   {/* History */}
-                <ul className="overflow-y-auto h-[530px] overscroll-y-auto w-">
-                  {chatSessions.map((session, index) => (
-                    <li
-                      key={index}
-                      className="p-1 mx-1 mt-1 mb-4 truncate rounded-md bg-[#b7b6b6] cursor-pointer text-[15px]"
-                      onClick={() => setCurrentSessionIndex(index)}
-                    >
-                      {session.title}
-                    </li>
-                  ))}
-                </ul>
-
+                  <ul className="overflow-y-auto h-[530px] overscroll-y-auto w-">
+                    {chatSessions.map((session, index) => (
+                      <li
+                        key={index}
+                        className="p-1 mx-1 mt-1 mb-4 truncate rounded-md bg-[#b7b6b6] cursor-pointer text-[15px]"
+                        onClick={() => setCurrentSessionIndex(index)}
+                      >
+                        {session.title}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
                 {/* User Email */}
                 <div className="bg-[#dfcfcd] rounded px-0.5 py-1 text-center shadow shadow-gray-600 mx-1 cursor-pointer">
@@ -177,7 +222,6 @@ const PromptPage = () => {
         ) : null}
 
         {/* Prompt Area */}
-
         {/* Prompt  */}
         <div className="flex flex-col w-[80%] gap-y-4 mr-36 text-wrap">
           <div className="w-full h-[85%] border-[1px] border-white rounded-tl-[20px] rounded-tr-[50px] rounded-br-[50px] rounded-bl-[30px] pl-3 pr-6 shadow-[-5px_5px_2px_5px_#00000024] shadow-[#5a5a5ab9] overflow-y-scroll no-scrollbar overflow-x-hidden">
@@ -186,8 +230,8 @@ const PromptPage = () => {
                 key={index}
                 className="w-full my-3 mt-4 px-3 h-auto bg-[#d9d9d98d] rounded-xl p-4 text-wrap text-clip"
               >
-                <p className="flex items-center w-fit gap-x-3"><ImUser className="text-3xl"/> {chat.question}</p>
-                <p className="flex items-start mt-3 gap-x-3 min-h-fit max-h-max "><img src={loading_img} alt="" className="w-8"/>{chat.answer}</p>
+                <p className="flex items-center w-fit gap-x-3"><ImUser className="text-3xl" /> {chat.question}</p>
+                <p className="flex items-start mt-3 gap-x-3 min-h-fit max-h-max "><img src={loading_img} alt="" className="w-8" />{chat.answer}</p>
               </div>
             ))}
           </div>
