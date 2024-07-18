@@ -9,12 +9,13 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { IoHome } from "react-icons/io5";
 import { ImUser } from "react-icons/im";
-import loading_img from '../assets/assistant.svg'
+import loading_img from "../assets/assistant.svg";
+import { TbColumnsOff } from "react-icons/tb";
 
 const PromptPage = () => {
   const navigate = useNavigate();
   const username = "Aditya";
-  let animate = true;
+  
   // Sidebar handling system.
   const [sidebar, setSidebar] = useState(false);
 
@@ -41,6 +42,10 @@ const PromptPage = () => {
   // State for handling chat history..
   const [chatHistory, setChatHistory] = useState([]);
 
+  const [isChat, setIsChat] = useState(false);
+
+  const [onreload, setOnReload] = useState(false);
+
   // Sidebar motion
   const sidebarMotion = () => {
     setSidebar(!sidebar);
@@ -48,72 +53,89 @@ const PromptPage = () => {
 
   // UseEffect to fetch chat history
   useEffect(() => {
-    loadChatHistoryFromLocalStorage();
+    async function fetchHistory() {
+      const response = await axios.get(
+        `http://127.0.0.1:8001/gpt/history?username=${username}`
+      );
+      const historyRes = response.data.history_list;
+      console.log(historyRes);
+      setChatHistory(historyRes);
+      setOnReload(true);
+    }
+    fetchHistory();
   }, []);
 
   const saveChatSessionsToLocalStorage = (sessions) => {
-    localStorage.setItem('chatSessions', JSON.stringify(sessions));
-  };
-
-  const loadChatHistoryFromLocalStorage = () => {
-    const storedChatSessions = localStorage.getItem('chatSessions');
-    if (storedChatSessions) {
-      setChatSessions(JSON.parse(storedChatSessions));
-    } else {
-      fetchChatHistory();
-    }
+    localStorage.setItem("chatSessions", JSON.stringify(sessions));
   };
 
   const fetchChatHistory = async () => {
     try {
-      const response = await axios.get(`http://127.0.0.1:8001/gpt/history?username=${username}`);
+      const response = await axios.get(
+        `http://127.0.0.1:8001/gpt/history?username=${username}`
+      );
       const historyStatus = response.data.status;
       const historyRes = response.data.history_list;
+      console.log(historyRes);
 
       setChatHistory(historyRes);
 
       if (historyStatus) {
-        const historySessions = await Promise.all(historyRes.map(async (history) => {
-          const res = await axios.get(`http://127.0.0.1:8001/gpt/chat_history?username=${username}&chat_record=${history.id}`);
-          return {
-            title: history.title,
-            messages: res.data.messages.map(msg => ({ question: msg.question, answer: msg.response }))
-          };
-        }));
+        const historySessions = await Promise.all(
+          historyRes.map(async (history) => {
+            const res = await axios.get(
+              `http://127.0.0.1:8001/gpt/chat_history?username=${username}&chat_record=${history.id}`
+            );
+            return {
+              title: history.title,
+              messages: res.data.messages.map((msg) => ({
+                question: msg.question,
+                answer: msg.response,
+              })),
+            };
+          })
+        );
 
-        console.log(`History - ${historySessions}`);
+        console.log(`History Sessions- ${historySessions}`);
         const updatedSessions = [...chatSessions, ...historySessions];
         setChatSessions(updatedSessions);
         saveChatSessionsToLocalStorage(updatedSessions);
       }
     } catch (error) {
-      console.log('Error while getting History API', error);
+      console.log("Error while getting History API", error);
     }
   };
 
   const handleAPI = async () => {
     setNewChat(false);
     try {
-      animate = true;
       if (!text) {
         alert("Please enter some query!!!");
         return;
       }
 
+      let id = "";
+      if (isChat) {
+        id = chatHistory[currentSessionIndex];
+        console.log("id", id);
+      }
+
       const response = await axios.post("http://127.0.0.1:8001/gpt/ask", {
         question: text,
-        uid: true,
-        chat_id: "",
+        uid: !isChat,
+        chat_id: `${id}`,
+        title: text,
       });
       setText("");
       console.log(response);
+      fetchChatHistory();
 
       const newQuestion = response.data.question;
       const newAnswer = response.data.response;
 
       setQueryQuestion(newQuestion);
       setQueryAnswer(newAnswer);
-
+      setIsChat(true);
       const updatedSessions = [...chatSessions];
       const currentSession = updatedSessions[currentSessionIndex];
 
@@ -126,7 +148,6 @@ const PromptPage = () => {
         ...currentSession.messages,
         { question: newQuestion, answer: newAnswer },
       ];
-
       setChatSessions(updatedSessions);
       saveChatSessionsToLocalStorage(updatedSessions);
     } catch (error) {
@@ -136,14 +157,20 @@ const PromptPage = () => {
 
   const handleNewChat = async () => {
     setNewChat(true);
-    setChatSessions([...chatSessions, { title: "New Chat", messages: [] }]);
-    setCurrentSessionIndex(chatSessions.length);
+    // setChatSessions([...chatSessions, { title: "New Chat", messages: [] }]);
+    setChatSessions([{ title: "New Chat", messages: [] }]);
+    // setCurrentSessionIndex(chatSessions.length);
+    setIsChat(false);
     setQueryQuestion(null);
     setQueryAnswer(null);
   };
 
   const handleNavigate = () => {
     navigate("/");
+  };
+
+  const handleHistoryClick = (index) => {
+    setCurrentSessionIndex(index);
   };
 
   return (
@@ -196,15 +223,25 @@ const PromptPage = () => {
                 <div>
                   {/* History */}
                   <ul className="overflow-y-auto h-[530px] overscroll-y-auto w-">
-                    {chatSessions.map((session, index) => (
-                      <li
-                        key={index}
-                        className="p-1 mx-1 mt-1 mb-4 truncate rounded-md bg-[#b7b6b6] cursor-pointer text-[15px]"
-                        onClick={() => setCurrentSessionIndex(index)}
-                      >
-                        {session.title}
-                      </li>
-                    ))}
+                    {onreload
+                      ? chatHistory.map((session, index) => (
+                          <li
+                            key={index}
+                            className="p-1 mx-1 mt-1 mb-4 truncate rounded-md bg-[#b7b6b6] cursor-pointer text-[15px]"
+                            onClick={() => handleHistoryClick(index)}
+                          >
+                            {session}
+                          </li>
+                        ))
+                      : chatSessions.map((session, index) => (
+                          <li
+                            key={index}
+                            className="p-1 mx-1 mt-1 mb-4 truncate rounded-md bg-[#b7b6b6] cursor-pointer text-[15px]"
+                            onClick={() => handleHistoryClick(index)}
+                          >
+                            {session.title}
+                          </li>
+                        ))}
                   </ul>
                 </div>
                 {/* User Email */}
@@ -230,8 +267,13 @@ const PromptPage = () => {
                 key={index}
                 className="w-full my-3 mt-4 px-3 h-auto bg-[#d9d9d98d] rounded-xl p-4 text-wrap text-clip"
               >
-                <p className="flex items-center w-fit gap-x-3"><ImUser className="text-3xl" /> {chat.question}</p>
-                <p className="flex items-start mt-3 gap-x-3 min-h-fit max-h-max "><img src={loading_img} alt="" className="w-8" />{chat.answer}</p>
+                <p className="flex items-center w-fit gap-x-3">
+                  <ImUser className="text-3xl" /> {chat.question}
+                </p>
+                <p className="flex items-start mt-3 gap-x-3 min-h-fit max-h-max ">
+                  <img src={loading_img} alt="" className="w-8" />
+                  {chat.answer}
+                </p>
               </div>
             ))}
           </div>
