@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import bg_img from "../assets/prompt_bg.svg";
 import sidebar_img from "../assets/sidebar_bg.svg";
 import logo from "../assets/fingeni_by_chistats_logo.svg";
-// import sidepanel_img from "../assets/show_sidepanel.png";
 import { BsArrowRightCircleFill, BsArrowLeftCircleFill } from "react-icons/bs";
 import send_img from "../assets/sent.png";
 import axios from "axios";
@@ -10,12 +9,13 @@ import { useNavigate } from "react-router-dom";
 import { IoHome } from "react-icons/io5";
 import { ImUser } from "react-icons/im";
 import loading_img from "../assets/assistant.svg";
-import { TbColumnsOff } from "react-icons/tb";
+import loading_animation from '../assets/loading_animation.svg'
+import { MdDeleteForever } from "react-icons/md";
 
 const PromptPage = () => {
   const navigate = useNavigate();
   const username = "Aditya";
-  
+
   // Sidebar handling system.
   const [sidebar, setSidebar] = useState(false);
 
@@ -46,12 +46,15 @@ const PromptPage = () => {
 
   const [onreload, setOnReload] = useState(false);
 
+  // State for loading animation
+  const [loading, setLoading] = useState(false);
+
   // Sidebar motion
   const sidebarMotion = () => {
     setSidebar(!sidebar);
   };
 
-  // UseEffect to fetch chat history
+  // UseEffect to fetching chat history
   useEffect(() => {
     async function fetchHistory() {
       const response = await axios.get(
@@ -65,10 +68,70 @@ const PromptPage = () => {
     fetchHistory();
   }, []);
 
+  // function for handling api repsonses.
+  const handleAPI = async () => {
+    setNewChat(false);
+    setLoading(true);
+    if (!text) {
+      alert("Please enter some query!!!");
+      return;
+    }
+
+    let id = "";
+    if (isChat) {
+      id = chatHistory[currentSessionIndex];
+      console.log("id", id);
+    }
+    try {
+      const response = await axios.post(
+        "http://127.0.0.1:8001/gpt/ask",
+        {
+          question: text,
+          uid: !isChat,
+          chat_id: `${id}`,
+          title: text,
+        },
+      );
+      setText("");
+
+      if (response) {
+        fetchChatHistory();
+        setLoading(false);
+        const newQuestion = response.data.question;
+        const newAnswer = response.data.response;
+
+        setQueryQuestion(newQuestion);
+        setQueryAnswer(newAnswer);
+        setIsChat(true);
+        const updatedSessions = [...chatSessions];
+        const currentSession = updatedSessions[currentSessionIndex];
+
+        // Update title if it's the first question in the session
+        if (currentSession.messages.length === 0) {
+          currentSession.title = newQuestion;
+        }
+
+        currentSession.messages = [
+          ...currentSession.messages,
+          { question: newQuestion, answer: newAnswer },
+        ];
+        setChatSessions(updatedSessions);
+        saveChatSessionsToLocalStorage(updatedSessions);
+      }else{
+        setLoading(false)
+        alert('Error')
+      }
+    } catch (error) {
+      console.log("Error while getting data", error);
+    }
+  };
+
+  // Saving Chat to local storage
   const saveChatSessionsToLocalStorage = (sessions) => {
     localStorage.setItem("chatSessions", JSON.stringify(sessions));
   };
 
+  // Function for fetching chat history
   const fetchChatHistory = async () => {
     try {
       const response = await axios.get(
@@ -106,55 +169,7 @@ const PromptPage = () => {
     }
   };
 
-  const handleAPI = async () => {
-    setNewChat(false);
-    try {
-      if (!text) {
-        alert("Please enter some query!!!");
-        return;
-      }
-
-      let id = "";
-      if (isChat) {
-        id = chatHistory[currentSessionIndex];
-        console.log("id", id);
-      }
-
-      const response = await axios.post("http://127.0.0.1:8001/gpt/ask", {
-        question: text,
-        uid: !isChat,
-        chat_id: `${id}`,
-        title: text,
-      });
-      setText("");
-      console.log(response);
-      fetchChatHistory();
-
-      const newQuestion = response.data.question;
-      const newAnswer = response.data.response;
-
-      setQueryQuestion(newQuestion);
-      setQueryAnswer(newAnswer);
-      setIsChat(true);
-      const updatedSessions = [...chatSessions];
-      const currentSession = updatedSessions[currentSessionIndex];
-
-      // Update title if it's the first question in the session
-      if (currentSession.messages.length === 0) {
-        currentSession.title = newQuestion;
-      }
-
-      currentSession.messages = [
-        ...currentSession.messages,
-        { question: newQuestion, answer: newAnswer },
-      ];
-      setChatSessions(updatedSessions);
-      saveChatSessionsToLocalStorage(updatedSessions);
-    } catch (error) {
-      console.log("Error while getting data", error);
-    }
-  };
-
+  // function for handling newChat.
   const handleNewChat = async () => {
     setNewChat(true);
     // setChatSessions([...chatSessions, { title: "New Chat", messages: [] }]);
@@ -165,10 +180,12 @@ const PromptPage = () => {
     setQueryAnswer(null);
   };
 
+  // Function to navigate to home screen
   const handleNavigate = () => {
     navigate("/");
   };
 
+  // Function when the item from the chat history is clicked 
   const handleHistoryClick = (index) => {
     setCurrentSessionIndex(index);
   };
@@ -222,7 +239,7 @@ const PromptPage = () => {
 
                 <div>
                   {/* History */}
-                  <ul className="overflow-y-auto h-[530px] overscroll-y-auto w-">
+                  <ul className="overflow-y-auto h-[530px] overscroll-y-auto">
                     {onreload
                       ? chatHistory.map((session, index) => (
                           <li
@@ -231,15 +248,17 @@ const PromptPage = () => {
                             onClick={() => handleHistoryClick(index)}
                           >
                             {session}
+                            <MdDeleteForever className="text-2xl inline-flex hover:text-red-700 hover:transition-all hover:duration-75 hover:ease-in-out text-[#424242]"/>
                           </li>
                         ))
                       : chatSessions.map((session, index) => (
                           <li
                             key={index}
-                            className="p-1 mx-1 mt-1 mb-4 truncate rounded-md bg-[#b7b6b6] cursor-pointer text-[15px]"
+                            className="flex justify-between p-1 mx-1 mt-1 mb-4 truncate rounded-md bg-[#b7b6b6] cursor-pointer text-[15px]"
                             onClick={() => handleHistoryClick(index)}
                           >
                             {session.title}
+                            <MdDeleteForever className="text-2xl inline-flex hover:text-red-700 hover:transition-all hover:duration-75 hover:ease-in-out text-[#424242]"/>
                           </li>
                         ))}
                   </ul>
@@ -262,25 +281,40 @@ const PromptPage = () => {
         {/* Prompt  */}
         <div className="flex flex-col w-[80%] gap-y-4 mr-36 text-wrap">
           <div className="w-full h-[85%] border-[1px] border-white rounded-tl-[20px] rounded-tr-[50px] rounded-br-[50px] rounded-bl-[30px] pl-3 pr-6 shadow-[-5px_5px_2px_5px_#00000024] shadow-[#5a5a5ab9] overflow-y-scroll no-scrollbar overflow-x-hidden">
-            {chatSessions[currentSessionIndex].messages.map((chat, index) => (
+            <div className="w-full my-3 mt-4 px-3 h-auto bg-[#d9d9d98d] rounded-xl p-4 text-wrap break-words">
+              <p className="flex items-center justify-center break-words w-fit gap-x-3">
+                <ImUser className="text-3xl bg-red-100" /> {text}
+              </p>
+              {loading ? (
+                <p><img src={loading_animation} alt="loading animation" className="w-[60px]"/></p>
+              ): (
+                chatSessions[currentSessionIndex].messages.map(
+                  (items, index) => (
+                    <p
+                      className="flex items-start mt-3 gap-x-3 min-h-fit max-h-max "
+                      key={index}
+                    >
+                      <img src={loading_img} alt="" className="w-8" />
+                      {items.answer}
+                    </p>
+                  )
+                )
+              )}
+            </div>
+            {/* {chatSessions[currentSessionIndex].messages.map((chat, index) => (
               <div
                 key={index}
                 className="w-full my-3 mt-4 px-3 h-auto bg-[#d9d9d98d] rounded-xl p-4 text-wrap text-clip"
               >
-                <p className="flex items-center w-fit gap-x-3">
-                  <ImUser className="text-3xl" /> {chat.question}
-                </p>
-                <p className="flex items-start mt-3 gap-x-3 min-h-fit max-h-max ">
-                  <img src={loading_img} alt="" className="w-8" />
-                  {chat.answer}
-                </p>
+                <p className="flex items-center w-fit gap-x-3"><ImUser className="text-3xl" /> {chat.question}</p>
+                <p className="flex items-start mt-3 gap-x-3 min-h-fit max-h-max "><img src={loading_img} alt="" className="w-8" />{chat.answer}</p>
               </div>
-            ))}
+            ))} */}
           </div>
           <div className="p-1.5 mt-3 bg-white flex justify-between gap-x-7 px-3 rounded-lg items-center w-full h-[10%] input-container-height">
             <textarea
               type="text"
-              className="focus:border-[0.5px] focus:border-[#666666] focus:rounded focus:outline-none w-full resize-none p-1 text-sm h-full  overflow-y-auto"
+              className="bg-white focus:border-[0.5px] focus:border-[#666666] focus:rounded focus:outline-none w-full resize-none p-1 text-sm h-full  overflow-y-auto"
               rows={1}
               placeholder="Ask me anything regarding finance..."
               onChange={(e) => {
