@@ -9,12 +9,13 @@ import { useNavigate } from "react-router-dom";
 import { IoHome } from "react-icons/io5";
 import { ImUser } from "react-icons/im";
 import loading_img from "../assets/assistant.svg";
-import loading_animation from '../assets/loading_animation.svg'
+import loading_animation from "../assets/loading_animation.svg";
 import { MdDeleteForever } from "react-icons/md";
 
 const PromptPage = () => {
   const navigate = useNavigate();
   const username = "Aditya";
+  const API = `http://127.0.0.1:8004/gpt`;
 
   // Sidebar handling system.
   const [sidebar, setSidebar] = useState(false);
@@ -30,7 +31,10 @@ const PromptPage = () => {
 
   // State for setting chat session
   const [chatSessions, setChatSessions] = useState([
-    { title: "New Chat", messages: [] },
+    {
+      title: "My name is Vinit Gite and i am a frontend developer in Chistats ",
+      messages: [],
+    },
   ]);
 
   // state for setting session index
@@ -49,6 +53,9 @@ const PromptPage = () => {
   // State for loading animation
   const [loading, setLoading] = useState(false);
 
+  // history data saving
+  const [history, setHistory] = useState([{}])
+
   // Sidebar motion
   const sidebarMotion = () => {
     setSidebar(!sidebar);
@@ -57,11 +64,9 @@ const PromptPage = () => {
   // UseEffect to fetching chat history
   useEffect(() => {
     async function fetchHistory() {
-      const response = await axios.get(
-        `http://127.0.0.1:8001/gpt/history?username=${username}`
-      );
+      const response = await axios.get(`${API}/history?username=${username}`);
       const historyRes = response.data.history_list;
-      console.log(historyRes);
+      // console.log(historyRes);
       setChatHistory(historyRes);
       setOnReload(true);
     }
@@ -83,15 +88,12 @@ const PromptPage = () => {
       console.log("id", id);
     }
     try {
-      const response = await axios.post(
-        "http://127.0.0.1:8001/gpt/ask",
-        {
-          question: text,
-          uid: !isChat,
-          chat_id: `${id}`,
-          title: text,
-        },
-      );
+      const response = await axios.post(`${API}/ask`, {
+        question: text,
+        uid: !isChat,
+        chat_id: `${id}`,
+        title: text,
+      });
       setText("");
 
       if (response) {
@@ -117,9 +119,9 @@ const PromptPage = () => {
         ];
         setChatSessions(updatedSessions);
         saveChatSessionsToLocalStorage(updatedSessions);
-      }else{
-        setLoading(false)
-        alert('Error')
+      } else {
+        setLoading(false);
+        alert("Error");
       }
     } catch (error) {
       console.log("Error while getting data", error);
@@ -134,9 +136,7 @@ const PromptPage = () => {
   // Function for fetching chat history
   const fetchChatHistory = async () => {
     try {
-      const response = await axios.get(
-        `http://127.0.0.1:8001/gpt/history?username=${username}`
-      );
+      const response = await axios.get(`${API}/history?username=${username}`);
       const historyStatus = response.data.status;
       const historyRes = response.data.history_list;
       console.log(historyRes);
@@ -147,7 +147,7 @@ const PromptPage = () => {
         const historySessions = await Promise.all(
           historyRes.map(async (history) => {
             const res = await axios.get(
-              `http://127.0.0.1:8001/gpt/chat_history?username=${username}&chat_record=${history.id}`
+              `${API}/chat_history?username=${username}&chat_record=${history.id}`
             );
             return {
               title: history.title,
@@ -185,11 +185,14 @@ const PromptPage = () => {
     navigate("/");
   };
 
-  // Function when the item from the chat history is clicked 
-  const handleHistoryClick = (index) => {
-    setCurrentSessionIndex(index);
+  // Function when the item from the chat history is clicked
+  const handleHistoryClick = async (session, index) => {
+    const his_res = await axios.get(`${API}/chat_history?username=${username}&chat_record=${session}`);
+    console.log(his_res);
+    console.log(his_res.data.history);
+    setHistory(his_res.data.history)
   };
-
+  console.log('History', history);
   return (
     <section
       className="w-screen h-screen bg-center bg-no-repeat bg-cover"
@@ -244,11 +247,17 @@ const PromptPage = () => {
                       ? chatHistory.map((session, index) => (
                           <li
                             key={index}
-                            className="p-1 mx-1 mt-1 mb-4 truncate rounded-md bg-[#b7b6b6] cursor-pointer text-[15px]"
-                            onClick={() => handleHistoryClick(index)}
+                            className="flex p-1  mx-1 mt-1 mb-4 rounded-md bg-[#b7b6b6] hover:bg-[#dadada] cursor-pointer text-[15px]"
+                            onClick={() => handleHistoryClick(session, index)}
                           >
-                            {session}
-                            <MdDeleteForever className="text-2xl inline-flex hover:text-red-700 hover:transition-all hover:duration-75 hover:ease-in-out text-[#424242]"/>
+                            <p
+                              className="w-full truncate"
+                            >
+                              {session}
+                            </p>
+                            <p>
+                              <MdDeleteForever className="text-2xl inline-flex hover:text-red-700 hover:transition-all hover:duration-75 hover:ease-in-out text-[#424242]" />
+                            </p>
                           </li>
                         ))
                       : chatSessions.map((session, index) => (
@@ -258,7 +267,7 @@ const PromptPage = () => {
                             onClick={() => handleHistoryClick(index)}
                           >
                             {session.title}
-                            <MdDeleteForever className="text-2xl inline-flex hover:text-red-700 hover:transition-all hover:duration-75 hover:ease-in-out text-[#424242]"/>
+                            <MdDeleteForever className="text-2xl inline-flex hover:text-red-700 hover:transition-all hover:duration-75 hover:ease-in-out text-[#424242]" />
                           </li>
                         ))}
                   </ul>
@@ -281,26 +290,52 @@ const PromptPage = () => {
         {/* Prompt  */}
         <div className="flex flex-col w-[80%] gap-y-4 mr-36 text-wrap">
           <div className="w-full h-[85%] border-[1px] border-white rounded-tl-[20px] rounded-tr-[50px] rounded-br-[50px] rounded-bl-[30px] pl-3 pr-6 shadow-[-5px_5px_2px_5px_#00000024] shadow-[#5a5a5ab9] overflow-y-scroll no-scrollbar overflow-x-hidden">
-            <div className="w-full my-3 mt-4 px-3 h-auto bg-[#d9d9d98d] rounded-xl p-4 text-wrap break-words">
-              <p className="flex items-center justify-center break-words w-fit gap-x-3">
-                <ImUser className="text-3xl bg-red-100" /> {text}
-              </p>
-              {loading ? (
-                <p><img src={loading_animation} alt="loading animation" className="w-[60px]"/></p>
-              ): (
-                chatSessions[currentSessionIndex].messages.map(
-                  (items, index) => (
-                    <p
-                      className="flex items-start mt-3 gap-x-3 min-h-fit max-h-max "
-                      key={index}
-                    >
-                      <img src={loading_img} alt="" className="w-8" />
-                      {items.answer}
-                    </p>
-                  )
-                )
-              )}
-            </div>
+            {
+              history.length > 1 ? (
+                history.map((outcome, index) => {
+                  <div
+                key={index}
+                className="w-full my-3 mt-4 px-3 h-auto bg-[#d9d9d98d] rounded-xl p-4 text-wrap text-clip"
+              >
+                <p className="flex items-center w-fit gap-x-3">
+                  <ImUser className="text-3xl" /> {outcome.question}
+                </p>
+                <p className="flex items-start mt-3 gap-x-3 min-h-fit max-h-max ">
+                  <img src={loading_img} alt="" className="w-8" />
+                  {outcome.response}
+                </p>
+              </div>
+                })
+              ): (chatSessions[currentSessionIndex].messages.map((chat, index) => (
+                <div
+                  key={index}
+                  className="w-full my-3 mt-4 px-3 h-auto bg-[#d9d9d98d] rounded-xl p-4 text-wrap text-clip"
+                >
+                  <p className="flex items-center w-fit gap-x-3">
+                    <ImUser className="text-3xl" /> {chat.question}
+                  </p>
+                  <p className="flex items-start mt-3 gap-x-3 min-h-fit max-h-max ">
+                    <img src={loading_img} alt="" className="w-8" />
+                    {chat.answer}
+                  </p>
+                </div>
+              )))
+            }
+            {/* {chatSessions[currentSessionIndex].messages.map((chat, index) => (
+              <div
+                key={index}
+                className="w-full my-3 mt-4 px-3 h-auto bg-[#d9d9d98d] rounded-xl p-4 text-wrap text-clip"
+              >
+                <p className="flex items-center w-fit gap-x-3">
+                  <ImUser className="text-3xl" /> {chat.question}
+                </p>
+                <p className="flex items-start mt-3 gap-x-3 min-h-fit max-h-max ">
+                  <img src={loading_img} alt="" className="w-8" />
+                  {chat.answer}
+                </p>
+              </div>
+            ))} */}
+
             {/* {chatSessions[currentSessionIndex].messages.map((chat, index) => (
               <div
                 key={index}
@@ -309,6 +344,13 @@ const PromptPage = () => {
                 <p className="flex items-center w-fit gap-x-3"><ImUser className="text-3xl" /> {chat.question}</p>
                 <p className="flex items-start mt-3 gap-x-3 min-h-fit max-h-max "><img src={loading_img} alt="" className="w-8" />{chat.answer}</p>
               </div>
+              <p>
+                <img
+                  src={loading_animation}
+                  alt="loading animation"
+                  className="w-[60px]"
+                />
+              </p>
             ))} */}
           </div>
           <div className="p-1.5 mt-3 bg-white flex justify-between gap-x-7 px-3 rounded-lg items-center w-full h-[10%] input-container-height">
